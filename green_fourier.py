@@ -76,6 +76,40 @@ def green_fourier(Gtau, beta, wn_mesh):
     return giwn
 
 
+def tail_fitting(beta, G, n_init, tailPriori = [1, None, None]):
+    assert(len(tailPriori) == 3)
+
+    n_w = len(G)
+    omega = np.array([1j*(2*n + 1)*np.pi/beta for n in range(n_init, n_w)], dtype = 'complex128')
+
+    a = np.zeros([3], dtype = 'float64')
+    tail_a = [None, None, None] 
+
+    if tailPriori[0] is not None:
+        tail_a[0] = lambda a : tailPriori[0]/omega
+        a[0] = tailPriori[0]
+    else:
+        tail_a[0] = lambda a : a[0]/omega
+
+    if tailPriori[1] is not None:
+        tail_a[1] = lambda a : tailPriori[1]/omega**2
+        a[1] = tailPriori[1]
+    else:
+        tail_a[1] = lambda a : a[1]/omega**2
+
+    if tailPriori[2] is not None:
+        tail_a[2] = lambda a : tailPriori[2]/omega**3
+        a[2] = tailPriori[2]
+    else:
+        tail_a[2] = lambda a : a[2]/omega**3
+
+    def functor(a):
+        return np.sum(np.abs(G[n_init:] - (tail_a[0](a) + tail_a[1](a) + tail_a[2](a))))
+
+    res = minimize(functor, a, method = 'BFGS', options = {'gtol' : 1e-8, 'disp' : False})
+
+    return res.x
+
 
 
 if __name__ == "__main__":
